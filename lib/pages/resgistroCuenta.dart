@@ -1,4 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:my_libreria_upec/pages/loginPage.dart';
+import 'package:my_libreria_upec/services/cloudFirestore.dart';
+import 'package:quickalert/quickalert.dart';
 
 class RegistroPage extends StatefulWidget {
   const RegistroPage({super.key});
@@ -27,6 +31,44 @@ class _RegistroPageState extends State<RegistroPage> {
   }
 
   @override
+  void dispose() {
+    _firstNameController.dispose();
+    _emailController.dispose();
+    _confirmemailController.dispose();
+    _passwordController.dispose();
+    _confirmpasswordController.dispose();
+    super.dispose();
+  }
+
+  final ConexionCloudFirestore _auth = ConexionCloudFirestore();
+  void registrarUser() async {
+    try {
+      final UserCredential = await _auth.register(_emailController.text,
+          _passwordController.text, _firstNameController.text);
+
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (context) => LoginPage()));
+      QuickAlert.show(
+        context: context,
+        type: QuickAlertType.success,
+        text:
+            'Usted se ha registrado exitosamente, por favor regrese a la pantalla principal para ingresar',
+      );
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        // El correo electrónico ya está en uso, mostrar mensaje de error
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('El correo electrónico ya está en uso.'),
+          duration: Duration(seconds: 5),
+          backgroundColor: Colors.red,
+        ));
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Material(
       child: Container(
@@ -49,7 +91,7 @@ class _RegistroPageState extends State<RegistroPage> {
             ),
             Container(
               padding: EdgeInsets.all(20),
-              height: 750,
+              height: 711,
               width: 340,
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -127,7 +169,7 @@ class _RegistroPageState extends State<RegistroPage> {
                         }
                         if (!RegExp("^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+.[a-z]")
                             .hasMatch(value)) {
-                          return ("Por favor ingresa un email");
+                          return ("Por favor ingresa un email valido ");
                         } else {
                           return null;
                         }
@@ -142,7 +184,7 @@ class _RegistroPageState extends State<RegistroPage> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 25),
                     child: TextFormField(
-                      controller: _emailController,
+                      controller: _confirmemailController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                           enabledBorder: OutlineInputBorder(
@@ -155,9 +197,9 @@ class _RegistroPageState extends State<RegistroPage> {
                           hintText: 'Confirmar Email',
                           fillColor: Colors.white),
                       validator: (value) {
-                        if (_confirmpasswordController.text !=
-                            _passwordController.text) {
-                          return "Contraseñas no coinciden";
+                        if (_confirmemailController.text !=
+                            _emailController.text) {
+                          return "Email no coinciden";
                         } else {
                           return null;
                         }
@@ -268,9 +310,13 @@ class _RegistroPageState extends State<RegistroPage> {
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18),
                           ))),
-                      onPressed: () {}),
+                      onPressed: () {
+                        if (_formKey.currentState?.validate() == true) {
+                          registrarUser();
+                        }
+                      }),
                   SizedBox(
-                    height: 32,
+                    height: 5,
                   ),
                 ],
               ),

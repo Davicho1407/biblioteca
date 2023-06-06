@@ -1,7 +1,12 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:my_libreria_upec/pages/olvidarContrase%C3%B1a.dart';
+import 'package:my_libreria_upec/pages/paginaBody.dart';
 import 'package:my_libreria_upec/pages/resgistroCuenta.dart';
 import 'package:http/http.dart' as http;
+import 'package:my_libreria_upec/services/authGoogle.dart';
+import 'package:my_libreria_upec/services/authentication.dart';
 import 'package:mysql1/mysql1.dart';
 import 'dart:async';
 
@@ -17,6 +22,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
   final _formKey = GlobalKey<FormState>();
   bool _isObscure = true;
   bool _isObscure2 = true;
@@ -25,6 +31,13 @@ class _LoginPageState extends State<LoginPage> {
     return (value == null || value.isEmpty)
         ? 'Este es un requisito obligatorio'
         : null;
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -53,7 +66,7 @@ class _LoginPageState extends State<LoginPage> {
               height: 20,
             ),
             Container(
-              height: 500,
+              height: 550,
               width: 340,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(40),
@@ -157,32 +170,38 @@ class _LoginPageState extends State<LoginPage> {
                     SizedBox(
                       height: 40,
                     ),
-                    BtnIniciarSesion(),
+                    BtnIniciarSesion(
+                        email: _emailController.text,
+                        password: _passwordController.text,
+                        formkey: _formKey),
                     SizedBox(
-                      height: 60,
+                      height: 40,
                     ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              BtnDireccion(
-                                  nombre: "Olvide mi contraseña?",
-                                  ruta: OlvideContrasePage()),
-                            ],
+                    Container(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                BtnDireccion(
+                                    nombre: "Olvide mi contraseña?",
+                                    ruta: OlvideContrasePage())
+                              ],
+                            ),
                           ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              BtnDireccion(
-                                  nombre: "Registrarse?", ruta: RegistroPage())
-                            ],
-                          ),
-                        )
-                      ],
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                BtnDireccion(
+                                    nombre: "Registrarse?",
+                                    ruta: RegistroPage())
+                              ],
+                            ),
+                          )
+                        ],
+                      ),
                     )
                   ],
                 ),
@@ -204,6 +223,36 @@ class BtnGoogle extends StatefulWidget {
 
 class _BtnGoogleState extends State<BtnGoogle> {
   bool _isPressed = false;
+  // final IngresarConGoogle _auth = IngresarConGoogle();
+
+  Future<UserCredential> signInWithGoogle() async {
+    try {
+      // Trigger the authentication flow
+      final googleUser = await GoogleSignIn().signIn();
+
+      if (googleUser != null) {
+        // Obtain the auth details from the request
+        final googleAuth = await googleUser.authentication;
+
+        // Create a new credential
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth?.accessToken,
+          idToken: googleAuth?.idToken,
+        );
+
+        // Once signed in, return the UserCredential
+        return await FirebaseAuth.instance.signInWithCredential(credential);
+      } else {
+        throw Exception('Inicio de sesión con Google cancelado.');
+      }
+    } catch (e) {
+      // Handle any errors or exceptions
+      print('Error en el inicio de sesión con Google: $e');
+      throw Exception(
+          'Error en el inicio de sesión con Google. Por favor, inténtalo de nuevo.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -252,13 +301,36 @@ class _BtnGoogleState extends State<BtnGoogle> {
             _isPressed = false;
           });
         },
-        onTap: () {},
+        onTap: () {
+          try {
+            signInWithGoogle();
+            Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PaginaBody(),
+                ));
+          } catch (e) {
+            print('Error es: $e');
+          }
+        },
       ),
     );
   }
 }
 
+///////////////////////////////////////////////////////
+
 class BtnIniciarSesion extends StatefulWidget {
+  final String email;
+  final String password;
+  final GlobalKey<FormState> formkey;
+
+  const BtnIniciarSesion({
+    super.key,
+    required this.email,
+    required this.password,
+    required this.formkey,
+  });
   @override
   State<BtnIniciarSesion> createState() => _BtnIniciarSesionState();
 }
@@ -266,9 +338,26 @@ class BtnIniciarSesion extends StatefulWidget {
 class _BtnIniciarSesionState extends State<BtnIniciarSesion> {
   // final usuario = TextEditingController();
   // final password = TextEditingController();
-  String user = '';
-  String pass = '';
+
   bool _isPressed = false;
+
+  final FirebaseAuthService _authService = FirebaseAuthService();
+  void signIn() async {
+    try {
+      final UserCredential =
+          await _authService.signIn(widget.email, widget.password);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PaginaBody(),
+        ),
+      );
+      // Reemplaza la pantalla actual con la pantalla de inicio
+    } catch (e) {
+      print('Error en la autenticacion con los requisitos: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -298,6 +387,11 @@ class _BtnIniciarSesionState extends State<BtnIniciarSesion> {
             ],
           ),
         ),
+        onTap: () {
+          if (widget.formkey.currentState?.validate() == true) {
+            signIn();
+          }
+        },
         onTapDown: (_) {
           setState(() {
             _isPressed = true;
@@ -312,30 +406,6 @@ class _BtnIniciarSesionState extends State<BtnIniciarSesion> {
           setState(() {
             _isPressed = false;
           });
-        },
-        onTap: () async {
-          final conn = await MySqlConnection.connect(ConnectionSettings(
-            host: 'localhost',
-            port: 3307,
-            user: 'root',
-            password: '',
-            db: 'biblioteca',
-          ));
-          final results = await conn.query(
-            'SELECT * FROM tu_tabla WHERE usuario = ? AND contraseña = ?',
-            [user, pass],
-          );
-          if (results.isNotEmpty) {
-            // El usuario y la contraseña son válidos
-            print('Inicio de sesión exitoso');
-            // Realiza las acciones necesarias después del inicio de sesión exitoso
-          } else {
-            // El usuario y/o la contraseña no son válidos
-            print('Inicio de sesión fallido');
-            // Realiza las acciones necesarias después del inicio de sesión fallido
-          }
-
-          await conn.close();
         },
       ),
     );
