@@ -18,6 +18,86 @@ class _PaginaBodyState extends State<PaginaBody> {
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.tealAccent,
+        iconTheme: IconThemeData(color: Colors.black),
+        title: Text(
+          'Inicio',
+          style: TextStyle(color: Colors.black),
+        ),
+      ),
+      drawer: Drawer(
+          child: ListView(
+        children: [
+          UserAccountsDrawerHeader(
+              decoration: BoxDecoration(color: Colors.tealAccent),
+              accountName:
+                  Text("Usuario", style: TextStyle(color: Colors.black)),
+              accountEmail:
+                  Text("Contraseña", style: TextStyle(color: Colors.black))),
+          ListTile(
+            leading: Icon(Icons.house),
+            title: Text("Inicio"),
+          ),
+          ListTile(
+            leading: Icon(Icons.chat),
+            title: Text("Nuevo Chat"),
+          ),
+          ListTile(
+            leading: Icon(Icons.content_copy),
+            title: Text("Nuevo Contenido"),
+          ),
+          ListTile(
+            leading: Icon(Icons.book),
+            title: Text("Libros"),
+          ),
+          ListTile(
+            leading: Icon(Icons.art_track_sharp),
+            title: Text("Revistas"),
+          ),
+          ListTile(
+            leading: Icon(Icons.telegram),
+            title: Text("Red Social"),
+          ),
+          ListTile(
+            leading: Icon(Icons.notifications),
+            title: Text("Notificaciones"),
+          ),
+          ListTile(
+            leading: Icon(Icons.exit_to_app),
+            title: Text("Salir"),
+            onTap: () async {
+              try {
+                await FirebaseAuth.instance.signOut();
+                signOutFromGoogle();
+                // Navegar a la pantalla de inicio de sesión
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginPage()),
+                );
+              } catch (e) {
+                print(e);
+              }
+            },
+          )
+        ],
+      )),
+      body: _PaginaBienvenidad(),
+    );
+  }
+}
+
+class _PaginaBienvenidad extends StatefulWidget {
+  const _PaginaBienvenidad({super.key});
+
+  @override
+  State<_PaginaBienvenidad> createState() => __PaginaBienvenidadState();
+}
+
+class __PaginaBienvenidadState extends State<_PaginaBienvenidad> {
+  @override
+  Widget build(BuildContext context) {
     return Material(
         child: Container(
       height: MediaQuery.of(context).size.height,
@@ -29,21 +109,6 @@ class _PaginaBodyState extends State<PaginaBody> {
           end: Alignment.bottomRight, // Punto final del degradado
         ),
       ),
-      child: MaterialButton(
-          child: Text("Salir"),
-          onPressed: () async {
-            try {
-              await FirebaseAuth.instance.signOut();
-              signOutFromGoogle();
-              // Navegar a la pantalla de inicio de sesión
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => LoginPage()),
-              );
-            } catch (e) {
-              print(e);
-            }
-          }),
     ));
   }
 }
